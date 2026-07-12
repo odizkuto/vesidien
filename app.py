@@ -8,18 +8,22 @@ app = Flask(__name__)
 def index():
     ket_qua = ""
     if request.method == 'POST':
-        # Cào dữ liệu từ trang lịch cúp điện
-        url = "https://lichcupdien.org/lich-cup-dien-an-giang"
+        url = "https://lichcupdien.org/lich-cup-dien-an-giang/"
         headers = {"User-Agent": "Mozilla/5.0"}
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=10)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Lấy toàn bộ text và tìm Phú Tân
-            tat_ca = soup.get_text()
+            # Sử dụng set để lưu các dòng đã xuất hiện, tránh lặp lại
+            tat_ca = soup.get_text(separator='\n')
+            da_xuat_hien = set()
+            
             for dong in tat_ca.splitlines():
-                if "Phú Tân" in dong:
-                    ket_qua += dong.strip() + "<br>"
+                dong_sach = dong.strip()
+                # Kiểm tra nếu có "Phú Tân" và chưa từng xuất hiện trong bộ nhớ
+                if "Phú Tân" in dong_sach and dong_sach not in da_xuat_hien:
+                    ket_qua += dong_sach + "<br>"
+                    da_xuat_hien.add(dong_sach)
             
             if not ket_qua:
                 ket_qua = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
