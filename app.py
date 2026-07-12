@@ -1,36 +1,53 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    url = "https://lichcupdien.org/lich-cup-dien-an-giang/" # Thay bằng link chính xác bạn đang dùng
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Tìm khối lớn chứa toàn bộ nội dung (dựa trên ảnh bạn chụp)
-    container = soup.find('div', class_='lcd_detail_wrapper')
-    
-    danh_sach_lich = []
-    # Giả định mỗi lịch cúp điện là một khối cha bao gồm các 'new_lcd_wrapper' bên trong
-    # Nếu trang web chỉ có 1 danh sách dài, ta sẽ duyệt từng dòng
-    blocks = container.find_all('div', class_='new_lcd_wrapper')
-    
-    # Logic nhóm dữ liệu (ví dụ cứ mỗi 5 dòng là 1 thông tin lịch mới)
-    # Tùy thuộc vào trang web, bạn có thể cần điều chỉnh đoạn này
-    for i in range(0, len(blocks), 5): 
-        lich = {
-            'dien_luc': blocks[i].find('span', class_='content_item_content_lcd_wrapper').text.strip(),
-            'ngay': blocks[i+1].find('span', class_='content_item_content_lcd_wrapper').text.strip(),
-            'thoi_gian': blocks[i+2].find('span', class_='content_item_content_lcd_wrapper').text.strip(),
-            'khu_vuc': blocks[i+3].find('span', class_='content_item_content_lcd_wrapper').text.strip(),
-            'ly_do': blocks[i+4].find('span', class_='content_item_content_lcd_wrapper').text.strip()
+    ket_qua = ""
+    if request.method == 'POST':
+        # Giữ nguyên URL gốc của bạn
+        url = "https://lichcupdien.org/lich-cup-dien-an-giang"
+        
+        # Thêm User-Agent đầy đủ để Render không bị trang gốc chặn
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
-        danh_sach_lich.append(lich)
+        try:
+            response = requests.get(url, headers=headers, timeout=15)
+            # Ép kiểu dữ liệu về UTF-8 để không bị lỗi font tiếng Việt
+            response.encoding = 'utf-8'
             
-    return render_template('index.html', lich_cup_dien=danh_sach_lich)
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Sử dụng lại cách lấy text gốc của bạn để đảm bảo quét sạch dữ liệu
+            tat_ca = soup.get_text()
+            
+            da_xuat_hien = set() # Giỏ chứa các dòng đã quét qua để chống trùng lặp
+            danh_sach_loc = []
+            
+            for dong in tat_ca.splitlines():
+                dong_sach = dong.strip()
+                
+                # Chuyển hết về chữ thường (.lower()) khi so sánh để tránh sót chữ "Phú Tân", "phú tân" hay "PHÚ TÂN"
+                if "phú tân" in dong_sach.lower():
+                    # Chỉ lấy dòng chưa tồn tại và loại bỏ các dòng chữ quá ngắn (rác)
+                    if dong_sach not in da_xuat_hien and len(dong_sach) > 5:
+                        danh_sach_loc.append(dong_sach)
+                        da_xuat_hien.add(dong_sach)
+            
+            # Xuất kết quả ra giao diện
+            if danh_sach_loc:
+                ket_qua = "<br>".join(danh_sach_loc)
+            else:
+                ket_qua = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
+                
+        except Exception as e:
+            ket_qua = "Có lỗi xảy ra khi tải dữ liệu: " + str(e)
+            
+    return render_template('index.html', ket_qua=ket_qua)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
