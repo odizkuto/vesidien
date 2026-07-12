@@ -6,38 +6,45 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    ket_qua_list = [] # Lưu trữ 53 dòng dữ liệu
-    thong_bao = ""
-
+    ket_qua = ""
     if request.method == 'POST':
         url = "https://lichcupdien.org/lich-cup-dien-an-giang"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/120.0.0.0"
         }
         try:
             response = requests.get(url, headers=headers, timeout=15)
             response.encoding = 'utf-8'
-            soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Lấy toàn bộ text và lọc dòng theo từ khóa
+            soup = BeautifulSoup(response.text, 'html.parser')
             tat_ca = soup.get_text()
+            
             da_xuat_hien = set()
+            danh_sach_loc = []
             
             for dong in tat_ca.splitlines():
                 dong_sach = dong.strip()
-                # Lọc theo từ khóa và loại bỏ dòng rác
+                
                 if "phú tân" in dong_sach.lower():
                     if dong_sach not in da_xuat_hien and len(dong_sach) > 5:
-                        ket_qua_list.append(dong_sach)
+                        danh_sach_loc.append(dong_sach)
                         da_xuat_hien.add(dong_sach)
             
-            if not ket_qua_list:
-                thong_bao = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
+            # Xuất kết quả ra giao diện
+            if danh_sach_loc:
+                # 1. Nối các dòng lại bằng thẻ xuống dòng
+                ket_qua_dai = "<br>".join(danh_sach_loc)
+                
+                # 2. Thay thế dấu chấm kèm khoảng trắng bằng dấu chấm + 2 thẻ xuống dòng
+                # Điều này tạo ra khoảng cách dòng ngay sau dấu chấm mà không làm mất dữ liệu
+                ket_qua = ket_qua_dai.replace(". ", ".<br><br>")
+            else:
+                ket_qua = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
                 
         except Exception as e:
-            thong_bao = "Có lỗi xảy ra: " + str(e)
+            ket_qua = "Có lỗi xảy ra khi tải dữ liệu: " + str(e)
             
-    return render_template('index.html', ket_qua_list=ket_qua_list, thong_bao=thong_bao)
+    return render_template('index.html', ket_qua=ket_qua)
 
 if __name__ == '__main__':
     app.run(debug=True)
