@@ -9,7 +9,7 @@ def index():
     ket_qua = ""
     if request.method == 'POST':
         # Cào dữ liệu từ trang lịch cúp điện
-        url = "https://lichcupdien.org/lich-cup-dien-an-giang/"
+        url = "https://lichcupdien.org/lich-cup-dien-an-giang"
         headers = {"User-Agent": "Mozilla/5.0"}
         try:
             response = requests.get(url, headers=headers)
