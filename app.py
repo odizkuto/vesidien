@@ -6,32 +6,34 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    ket_qua_list = [] # Chuyển thành danh sách
+    ket_qua_list = [] # Lưu trữ 53 dòng dữ liệu
     thong_bao = ""
 
     if request.method == 'POST':
         url = "https://lichcupdien.org/lich-cup-dien-an-giang"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
-        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
         try:
             response = requests.get(url, headers=headers, timeout=15)
             response.encoding = 'utf-8'
             soup = BeautifulSoup(response.text, 'html.parser')
-            tat_ca = soup.get_text()
             
+            # Lấy toàn bộ text và lọc dòng theo từ khóa
+            tat_ca = soup.get_text()
             da_xuat_hien = set()
+            
             for dong in tat_ca.splitlines():
                 dong_sach = dong.strip()
+                # Lọc theo từ khóa và loại bỏ dòng rác
                 if "phú tân" in dong_sach.lower():
                     if dong_sach not in da_xuat_hien and len(dong_sach) > 5:
-                        # Tách dòng này thành các câu nhỏ dựa trên dấu chấm
-                        # Sau đó thêm từng câu vào danh sách
-                        cau_nho = [c.strip() for c in dong_sach.split('.') if c.strip()]
-                        ket_qua_list.extend(cau_nho)
+                        ket_qua_list.append(dong_sach)
                         da_xuat_hien.add(dong_sach)
             
             if not ket_qua_list:
                 thong_bao = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
+                
         except Exception as e:
             thong_bao = "Có lỗi xảy ra: " + str(e)
             
