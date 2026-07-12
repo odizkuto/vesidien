@@ -6,48 +6,36 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    ket_qua = ""
+    ket_qua_list = [] # Chuyển thành danh sách
+    thong_bao = ""
+
     if request.method == 'POST':
-        # Giữ nguyên URL gốc của bạn
         url = "https://lichcupdien.org/lich-cup-dien-an-giang"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
         
-        # Thêm User-Agent đầy đủ để Render không bị trang gốc chặn
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
         try:
             response = requests.get(url, headers=headers, timeout=15)
-            # Ép kiểu dữ liệu về UTF-8 để không bị lỗi font tiếng Việt
             response.encoding = 'utf-8'
-            
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Sử dụng lại cách lấy text gốc của bạn để đảm bảo quét sạch dữ liệu
             tat_ca = soup.get_text()
             
-            da_xuat_hien = set() # Giỏ chứa các dòng đã quét qua để chống trùng lặp
-            danh_sach_loc = []
-            
+            da_xuat_hien = set()
             for dong in tat_ca.splitlines():
                 dong_sach = dong.strip()
-                
-                # Chuyển hết về chữ thường (.lower()) khi so sánh để tránh sót chữ "Phú Tân", "phú tân" hay "PHÚ TÂN"
                 if "phú tân" in dong_sach.lower():
-                    # Chỉ lấy dòng chưa tồn tại và loại bỏ các dòng chữ quá ngắn (rác)
                     if dong_sach not in da_xuat_hien and len(dong_sach) > 5:
-                        danh_sach_loc.append(dong_sach)
+                        # Tách dòng này thành các câu nhỏ dựa trên dấu chấm
+                        # Sau đó thêm từng câu vào danh sách
+                        cau_nho = [c.strip() for c in dong_sach.split('.') if c.strip()]
+                        ket_qua_list.extend(cau_nho)
                         da_xuat_hien.add(dong_sach)
             
-            # Xuất kết quả ra giao diện
-            if danh_sach_loc:
-                ket_qua = "<br>".join(danh_sach_loc)
-            else:
-                ket_qua = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
-                
+            if not ket_qua_list:
+                thong_bao = "Hiện tại không tìm thấy thông tin cúp điện tại Phú Tân."
         except Exception as e:
-            ket_qua = "Có lỗi xảy ra khi tải dữ liệu: " + str(e)
+            thong_bao = "Có lỗi xảy ra: " + str(e)
             
-    return render_template('index.html', ket_qua=ket_qua)
+    return render_template('index.html', ket_qua_list=ket_qua_list, thong_bao=thong_bao)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
